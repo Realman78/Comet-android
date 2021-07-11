@@ -58,4 +58,15 @@
         android:text="+3 more"
         android:textSize="22sp"
         android:visibility="invisible" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/timeRemainingTV"
+        android:text="Time remaining: 05:00"
+        android:visibility="invisible"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/leftTv"
+        android:layout_marginTop="25dp"
+        android:textSize="16dp"
+        />
 </RelativeLayout>

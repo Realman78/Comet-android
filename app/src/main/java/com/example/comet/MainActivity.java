@@ -1,18 +1,15 @@
 package com.example.comet;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.ClipData;
-import android.content.Context;
+import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.database.Cursor;
+
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.provider.MediaStore;
+
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -33,15 +30,11 @@ import com.cloudinary.android.callback.UploadCallback;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class MainActivity extends AppCompatActivity {
     String TAG = "Heoking shit scoob";
@@ -49,9 +42,13 @@ public class MainActivity extends AppCompatActivity {
     TextView codeTV;
     TextView getFilesTV;
     TextView leftTV;
+    TextView timeRemTV;
+    int i;
+    int counter = 0;
+    CountDownTimer timer;
 
     ArrayList<Uri> mArrayUri;
-    boolean isLast;
+    boolean isLast = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,9 +58,10 @@ public class MainActivity extends AppCompatActivity {
         codeTV = findViewById(R.id.codeTV);
         getFilesTV = findViewById(R.id.getFilesTV);
         leftTV = findViewById(R.id.leftTv);
+        timeRemTV = findViewById(R.id.timeRemainingTV);
 
         codeTV.setText("");
-        Map config = new HashMap();
+        HashMap config = new HashMap();
         config.put("cloud_name", "dzmz24nr0");
         config.put("secure", true);
         config.put("api_key", "411549117332673");
@@ -82,12 +80,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    public Uri getImageUri(Context inContext, Bitmap inImage) {
+    /*public Uri getImageUri(Context inContext, Bitmap inImage) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         inImage.compress(Bitmap.CompressFormat.PNG, 100, bytes);
         String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "test", null);
         return Uri.parse(path);
-    }
+    }*/
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -96,7 +94,15 @@ public class MainActivity extends AppCompatActivity {
             if (requestCode == 1 && resultCode == RESULT_OK
                     && null != data) {
                 mArrayUri = new ArrayList<>();
+                getFilesTV.setVisibility(View.INVISIBLE);
+                leftTV.setVisibility(View.INVISIBLE);
+                timeRemTV.setVisibility(View.INVISIBLE);
+                imgView.setImageURI(null);
+                codeTV.setText("");
+                if (timer != null)
+                    timer.cancel();
                 if (data.getClipData() != null) {
+                    codeTV.setText("Loading...");
                     int cout = data.getClipData().getItemCount();
                     for (int i = 0; i < cout; i++) {
                         // adding imageuri in array
@@ -104,7 +110,6 @@ public class MainActivity extends AppCompatActivity {
                         mArrayUri.add(imageurl);
                         Log.i(TAG, "onActivityResult: " + imageurl);
                     }
-                    imgView.setImageURI( data.getClipData().getItemAt(0).getUri());
 
                 } else {
                     Uri imageurl = data.getData();
@@ -114,12 +119,8 @@ public class MainActivity extends AppCompatActivity {
                 int min = 100000;
                 int max = 999999;
                 final int code = new Random().nextInt((max - min) + 1) + min;
-                isLast = false;
-                for (int i = 0; i < mArrayUri.size(); i++){
-                    if (i ==  mArrayUri.size()-1) {
-                        isLast = true;
-                    }
-                    Uri tmpUri = mArrayUri.get(i);
+                counter = 0;
+                for (final Uri tmpUri : mArrayUri){
                     MediaManager.get().upload(tmpUri)
                             .unsigned("julve1gi")
                             .callback(new UploadCallback() {
@@ -136,8 +137,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void onSuccess(String requestId, Map resultData) {
                                     resultData.put("code", code + "");
-                                    //Log.i(TAG, "onSuccess: " + resultData.get("public_id") + "; url = " + resultData.get("url"));
-                                    request(resultData, isLast,  mArrayUri.size()-1);
+                                    request(resultData, mArrayUri.size()-1, tmpUri);
                                 }
 
                                 @Override
@@ -166,29 +166,37 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public void request(Map<String, String> body, final boolean last, final int left){
+    public void request(Map<String, String> body, final int left, final Uri showImageUri){
         String url = "http://192.168.1.101:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
-        JSONObject jsonObject = null;
+        JSONObject jsonObject;
+
         jsonObject = new JSONObject(body);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
 
+                    @SuppressLint("DefaultLocale")
                     @Override
                     public void onResponse(JSONObject response) {
                         try {
-                            if (last){
+                            if (counter++ == left || left == 0){
+                                codeTV.setText(response.getString("code"));
                                 getFilesTV.setVisibility(View.VISIBLE);
-                                if (left > 0){
-                                    leftTV.setText("+" +  left + " more");
+                                imgView.setImageURI(showImageUri);
+                                timeRemTV.setVisibility(View.VISIBLE);
+                                if (left >= 1){
+                                    leftTV.setText(String.format("+%d more", left));
                                     leftTV.setVisibility(View.VISIBLE);
                                 }
 
-                                codeTV.setText(response.getString("code"));
-                                CountDownTimer timer = new CountDownTimer(360*1000, 5*1000) {
+
+                                timer = new CountDownTimer(300*1000, 1000) {
                                     @Override
                                     public void onTick(long millisUntilFinished) {
-
+                                        int secondsUntilFinished = (int) millisUntilFinished/1000;
+                                        int minutes = secondsUntilFinished/60;
+                                        int seconds = secondsUntilFinished%60;
+                                        timeRemTV.setText(String.format("Time remaining: %02d:%02d", minutes, seconds));
                                     }
 
                                     @Override
@@ -196,15 +204,17 @@ public class MainActivity extends AppCompatActivity {
                                         getFilesTV.setVisibility(View.INVISIBLE);
                                         leftTV.setVisibility(View.INVISIBLE);
                                         imgView.setImageURI(null);
+                                        timeRemTV.setVisibility(View.INVISIBLE);
                                         codeTV.setText("");
                                     }
                                 };
                                 timer.start();
                             }
 
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
+
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
                     }
                 }, new Response.ErrorListener() {
 
