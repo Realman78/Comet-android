@@ -170,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
         String url = "http://192.168.1.101:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
         JSONObject jsonObject;
+        //Ayo why no update github?
 
         jsonObject = new JSONObject(body);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
