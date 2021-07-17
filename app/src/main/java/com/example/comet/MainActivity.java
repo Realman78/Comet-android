@@ -167,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
-        String url = "http://192.168.1.101:3000/";
+        String url = "http://192.168.1.160:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
         JSONObject jsonObject;
         //Ayo why no update github?

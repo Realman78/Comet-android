@@ -4,15 +4,31 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#2c343c"
     tools:context=".MainActivity">
+    <TextView
+        android:id="@+id/heading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="☄Comet"
+        android:textColor="#e7f4ff"
+        android:textSize="48sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+
+        />
 
     <Button
         android:id="@+id/loadimage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/heading"
         android:layout_marginTop="64dp"
+        android:background="#45E7F4FF"
+        android:textColor="#e7f4ff"
         android:layout_centerHorizontal="true"
         android:text="Choose your files here"
+
         />
 
     <TextView
@@ -24,6 +40,7 @@
         android:layout_marginTop="36dp"
         android:text="Get your files at:"
         android:textSize="24sp"
+        android:textColor="#e7f4ff"
         android:visibility="invisible" />
 
     <TextView
@@ -31,6 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="000000"
+        android:textColor="#e7f4ff"
         android:layout_below="@id/getFilesTV"
         android:layout_centerHorizontal="true"
         android:textSize="24sp" />
@@ -39,7 +57,7 @@
         android:id="@+id/targetimage"
         android:layout_width="150dp"
         android:layout_height="150dp"
-
+        android:textColor="#e7f4ff"
         android:maxWidth="150dp"
         android:maxHeight="150dp"
         android:minWidth="50dp"
@@ -56,6 +74,7 @@
         android:layout_below="@id/targetimage"
         android:layout_centerHorizontal="true"
         android:text="+3 more"
+        android:textColor="#e7f4ff"
         android:textSize="22sp"
         android:visibility="invisible" />
     <TextView
@@ -64,9 +83,11 @@
         android:id="@+id/timeRemainingTV"
         android:text="Time remaining: 05:00"
         android:visibility="invisible"
+        android:textColor="#e7f4ff"
         android:layout_centerHorizontal="true"
         android:layout_below="@id/leftTv"
         android:layout_marginTop="25dp"
         android:textSize="16dp"
         />
+
 </RelativeLayout>
