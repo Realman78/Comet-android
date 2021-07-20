@@ -6,10 +6,13 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -23,9 +26,11 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.cloudinary.Cloudinary;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
+import com.cloudinary.utils.ObjectUtils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,8 +49,10 @@ public class MainActivity extends AppCompatActivity {
     TextView leftTV;
     TextView timeRemTV;
     int i;
+    Button button;
     int counter = 0;
     CountDownTimer timer;
+    Cloudinary cloudinary;
 
     ArrayList<Uri> mArrayUri;
     boolean isLast = false;
@@ -53,12 +60,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button button = findViewById(R.id.loadimage);
+        button = findViewById(R.id.loadimage);
         imgView = findViewById(R.id.targetimage);
         codeTV = findViewById(R.id.codeTV);
         getFilesTV = findViewById(R.id.getFilesTV);
         leftTV = findViewById(R.id.leftTv);
         timeRemTV = findViewById(R.id.timeRemainingTV);
+
 
         codeTV.setText("");
         HashMap config = new HashMap();
@@ -66,19 +74,22 @@ public class MainActivity extends AppCompatActivity {
         config.put("secure", true);
         config.put("api_key", "411549117332673");
         config.put("api_secret", "crgNRrcVJ7v6PA76-8HlbEzx5vE");
-
+        cloudinary = new Cloudinary(config);
 
         MediaManager.init(this, config);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent();
-                intent.setType("image/*");
+                intent.setType("*/*");
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 intent.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(intent,"Select Picture"), 1);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                startActivityForResult(Intent.createChooser(intent,"Select Media"), 1);
             }
         });
+        button.performClick();
     }
     /*public Uri getImageUri(Context inContext, Bitmap inImage) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -99,20 +110,21 @@ public class MainActivity extends AppCompatActivity {
                 timeRemTV.setVisibility(View.INVISIBLE);
                 imgView.setImageURI(null);
                 codeTV.setText("");
+                codeTV.setText("Loading...");
                 if (timer != null)
                     timer.cancel();
                 if (data.getClipData() != null) {
-                    codeTV.setText("Loading...");
                     int cout = data.getClipData().getItemCount();
                     for (int i = 0; i < cout; i++) {
                         // adding imageuri in array
                         Uri imageurl = data.getClipData().getItemAt(i).getUri();
                         mArrayUri.add(imageurl);
-                        Log.i(TAG, "onActivityResult: " + imageurl);
+                        Log.i(TAG, "JBTOTE: " + imageurl);
                     }
 
                 } else {
                     Uri imageurl = data.getData();
+                    Log.i(TAG, "onActivityResult: dae " + imageurl);
                     mArrayUri.add(imageurl);
 
                 }
@@ -121,7 +133,9 @@ public class MainActivity extends AppCompatActivity {
                 final int code = new Random().nextInt((max - min) + 1) + min;
                 counter = 0;
                 for (final Uri tmpUri : mArrayUri){
+                    ///cloudinary.uploader().unsignedUpload(tmpUri, "julve1gi", ObjectUtils.asMap("resource_type", "image"));
                     MediaManager.get().upload(tmpUri)
+                            .options(ObjectUtils.asMap("resource_type", "auto"))
                             .unsigned("julve1gi")
                             .callback(new UploadCallback() {
                                 @Override
@@ -137,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void onSuccess(String requestId, Map resultData) {
                                     resultData.put("code", code + "");
+
                                     request(resultData, mArrayUri.size()-1, tmpUri);
                                 }
 
@@ -167,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
-        String url = "http://192.168.1.160:3000/";
+        String url = "http://192.168.1.254:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
         JSONObject jsonObject;
         //Ayo why no update github?
@@ -189,9 +204,12 @@ public class MainActivity extends AppCompatActivity {
                                     leftTV.setText(String.format("+%d more", left));
                                     leftTV.setVisibility(View.VISIBLE);
                                 }
+                                if (imgView.getDrawable() == null){
+                                    imgView.setBackgroundResource(R.drawable.file);
+                                }
 
 
-                                timer = new CountDownTimer(300*1000, 1000) {
+                                timer = new CountDownTimer(30*1000, 1000) {
                                     @Override
                                     public void onTick(long millisUntilFinished) {
                                         int secondsUntilFinished = (int) millisUntilFinished/1000;
@@ -230,5 +248,8 @@ public class MainActivity extends AppCompatActivity {
 
         queue.add(jsonObjectRequest);
         queue.start();
+    }
+    public Bitmap createVideoThumbNail(String path){
+        return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MICRO_KIND);
     }
 }

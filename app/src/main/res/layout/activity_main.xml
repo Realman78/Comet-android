@@ -26,8 +26,9 @@
         android:layout_marginTop="64dp"
         android:background="#45E7F4FF"
         android:textColor="#e7f4ff"
+        android:textSize="28sp"
         android:layout_centerHorizontal="true"
-        android:text="Choose your files here"
+        android:text="+"
 
         />
 
