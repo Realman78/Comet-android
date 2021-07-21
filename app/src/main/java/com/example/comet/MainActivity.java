@@ -3,12 +3,18 @@ package com.example.comet;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 
@@ -27,7 +33,9 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.cloudinary.Cloudinary;
+import com.cloudinary.Util;
 import com.cloudinary.android.MediaManager;
+import com.cloudinary.android.Utils;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.cloudinary.utils.ObjectUtils;
@@ -53,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
     int counter = 0;
     CountDownTimer timer;
     Cloudinary cloudinary;
+    int min = 100000;
+    int max = 999999;
+    Uri lastPic;
 
     ArrayList<Uri> mArrayUri;
     boolean isLast = false;
@@ -75,18 +86,24 @@ public class MainActivity extends AppCompatActivity {
         config.put("api_key", "411549117332673");
         config.put("api_secret", "crgNRrcVJ7v6PA76-8HlbEzx5vE");
         cloudinary = new Cloudinary(config);
+        Log.i("TAG", "onClick: " + Build.VERSION.SDK_INT + "  " + Build.VERSION_CODES.Q);
 
         MediaManager.init(this, config);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent();
-                intent.setType("*/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                intent.setAction(Intent.ACTION_GET_CONTENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                startActivityForResult(Intent.createChooser(intent,"Select Media"), 1);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+                    startActivityForResult(new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.INTERNAL_CONTENT_URI),100);
+                }else{
+                    Intent intent = new Intent();
+                    intent.setType("*/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    intent.setAction(Intent.ACTION_GET_CONTENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    startActivityForResult(Intent.createChooser(intent,"Select Media"), 1);
+                }
+
             }
         });
         button.performClick();
@@ -102,12 +119,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         try {
             // When an Image is picked
+
             if (requestCode == 1 && resultCode == RESULT_OK
                     && null != data) {
                 mArrayUri = new ArrayList<>();
                 getFilesTV.setVisibility(View.INVISIBLE);
                 leftTV.setVisibility(View.INVISIBLE);
                 timeRemTV.setVisibility(View.INVISIBLE);
+                imgView.setVisibility(View.INVISIBLE);
                 imgView.setImageURI(null);
                 codeTV.setText("");
                 codeTV.setText("Loading...");
@@ -115,21 +134,18 @@ public class MainActivity extends AppCompatActivity {
                     timer.cancel();
                 if (data.getClipData() != null) {
                     int cout = data.getClipData().getItemCount();
+
                     for (int i = 0; i < cout; i++) {
                         // adding imageuri in array
                         Uri imageurl = data.getClipData().getItemAt(i).getUri();
                         mArrayUri.add(imageurl);
-                        Log.i(TAG, "JBTOTE: " + imageurl);
                     }
 
                 } else {
                     Uri imageurl = data.getData();
-                    Log.i(TAG, "onActivityResult: dae " + imageurl);
                     mArrayUri.add(imageurl);
-
                 }
-                int min = 100000;
-                int max = 999999;
+
                 final int code = new Random().nextInt((max - min) + 1) + min;
                 counter = 0;
                 for (final Uri tmpUri : mArrayUri){
@@ -151,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void onSuccess(String requestId, Map resultData) {
                                     resultData.put("code", code + "");
-
+                                    lastPic = tmpUri;
                                     request(resultData, mArrayUri.size()-1, tmpUri);
                                 }
 
@@ -174,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG)
+            Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
                     .show();
         }
 
@@ -184,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
         String url = "http://192.168.1.254:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
-        JSONObject jsonObject;
+        final JSONObject jsonObject;
         //Ayo why no update github?
 
         jsonObject = new JSONObject(body);
@@ -199,17 +215,22 @@ public class MainActivity extends AppCompatActivity {
                                 codeTV.setText(response.getString("code"));
                                 getFilesTV.setVisibility(View.VISIBLE);
                                 imgView.setImageURI(showImageUri);
+                                imgView.setVisibility(View.VISIBLE);
                                 timeRemTV.setVisibility(View.VISIBLE);
                                 if (left >= 1){
                                     leftTV.setText(String.format("+%d more", left));
                                     leftTV.setVisibility(View.VISIBLE);
                                 }
                                 if (imgView.getDrawable() == null){
-                                    imgView.setBackgroundResource(R.drawable.file);
+                                    Bitmap bmp;
+                                    MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
+                                    mMMR.setDataSource(getApplicationContext(), lastPic);
+                                    bmp = mMMR.getFrameAtTime();
+                                    imgView.setImageBitmap(bmp);
                                 }
 
 
-                                timer = new CountDownTimer(30*1000, 1000) {
+                                timer = new CountDownTimer(300*1000, 1000) {
                                     @Override
                                     public void onTick(long millisUntilFinished) {
                                         int secondsUntilFinished = (int) millisUntilFinished/1000;
@@ -223,6 +244,7 @@ public class MainActivity extends AppCompatActivity {
                                         getFilesTV.setVisibility(View.INVISIBLE);
                                         leftTV.setVisibility(View.INVISIBLE);
                                         imgView.setImageURI(null);
+                                        imgView.setVisibility(View.INVISIBLE);
                                         timeRemTV.setVisibility(View.INVISIBLE);
                                         codeTV.setText("");
                                     }
@@ -249,7 +271,16 @@ public class MainActivity extends AppCompatActivity {
         queue.add(jsonObjectRequest);
         queue.start();
     }
-    public Bitmap createVideoThumbNail(String path){
-        return ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.MICRO_KIND);
+    private static String getRealPath(Context context, Uri uri) {
+
+        final String column = "_data";
+        String[] proj = {MediaStore.Video.Media.DATA};
+        try (Cursor cursor = context.getContentResolver().query(uri, proj, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                final int index = cursor.getColumnIndexOrThrow(column);
+                return cursor.getString(index);
+            }
+        }
+        return null;
     }
 }
