@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-                    startActivityForResult(new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.INTERNAL_CONTENT_URI),100);
+                    Toast.makeText(MainActivity.this, "It wont work on your version", Toast.LENGTH_SHORT).show();
                 }else{
                     Intent intent = new Intent();
                     intent.setType("*/*");
