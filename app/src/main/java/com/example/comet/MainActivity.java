@@ -1,12 +1,13 @@
 package com.example.comet;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 
-import android.database.Cursor;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -14,7 +15,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -29,9 +29,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.cloudinary.Cloudinary;
-import com.cloudinary.Util;
 import com.cloudinary.android.MediaManager;
-import com.cloudinary.android.Utils;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.cloudinary.utils.ObjectUtils;
@@ -52,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     TextView getFilesTV;
     TextView leftTV;
     TextView timeRemTV;
-    int i;
+    View mainLayout;
     Button button;
     int counter = 0;
     CountDownTimer timer;
@@ -62,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     Uri lastPic;
 
     ArrayList<Uri> mArrayUri;
-    boolean isLast = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         getFilesTV = findViewById(R.id.getFilesTV);
         leftTV = findViewById(R.id.leftTv);
         timeRemTV = findViewById(R.id.timeRemainingTV);
-
+        mainLayout = findViewById(R.id.mainLayout);
 
         codeTV.setText("");
         HashMap config = new HashMap();
@@ -82,14 +79,14 @@ public class MainActivity extends AppCompatActivity {
         config.put("api_key", "411549117332673");
         config.put("api_secret", "crgNRrcVJ7v6PA76-8HlbEzx5vE");
         cloudinary = new Cloudinary(config);
-        Log.i("TAG", "onClick: " + Build.VERSION.SDK_INT + "  " + Build.VERSION_CODES.Q);
 
         MediaManager.init(this, config);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+                if (Build.VERSION.SDK_INT >= 31){
                     Toast.makeText(MainActivity.this, "It wont work on your version", Toast.LENGTH_SHORT).show();
+
                 }else{
                     Intent intent = new Intent();
                     intent.setType("*/*");
@@ -102,41 +99,34 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        button.performClick();
+        if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+
+        if (Build.VERSION.SDK_INT >= 29){
+            Toast.makeText(getApplicationContext(), "Recorded videos from gallery wont work", Toast.LENGTH_LONG).show();
+        }else{
+            button.performClick();
+        }
+        
     }
-    /*public Uri getImageUri(Context inContext, Bitmap inImage) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        inImage.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "test", null);
-        return Uri.parse(path);
-    }*/
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         try {
             // When an Image is picked
-
-            if (requestCode == 1 && resultCode == RESULT_OK
-                    && null != data) {
+            if (requestCode == 1 && resultCode == RESULT_OK && null != data) {
                 mArrayUri = new ArrayList<>();
-                getFilesTV.setVisibility(View.INVISIBLE);
-                leftTV.setVisibility(View.INVISIBLE);
-                timeRemTV.setVisibility(View.INVISIBLE);
-                imgView.setVisibility(View.INVISIBLE);
-                imgView.setImageURI(null);
-                codeTV.setText("");
+                cleanHome();
                 codeTV.setText("Loading...");
-                if (timer != null)
-                    timer.cancel();
+                if (timer != null) timer.cancel();
+
                 if (data.getClipData() != null) {
                     int cout = data.getClipData().getItemCount();
-
                     for (int i = 0; i < cout; i++) {
-                        // adding imageuri in array
                         Uri imageurl = data.getClipData().getItemAt(i).getUri();
                         mArrayUri.add(imageurl);
                     }
-
                 } else {
                     Uri imageurl = data.getData();
                     mArrayUri.add(imageurl);
@@ -145,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
                 final int code = new Random().nextInt((max - min) + 1) + min;
                 counter = 0;
                 for (final Uri tmpUri : mArrayUri){
-                    ///cloudinary.uploader().unsignedUpload(tmpUri, "julve1gi", ObjectUtils.asMap("resource_type", "image"));
                     MediaManager.get().upload(tmpUri)
                             .options(ObjectUtils.asMap("resource_type", "auto"))
                             .unsigned("julve1gi")
@@ -183,11 +172,13 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "You haven't picked Image",
                         Toast.LENGTH_LONG).show();
+                cleanHome();
             }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
                     .show();
+            cleanHome();
         }
 
         super.onActivityResult(requestCode, resultCode, data);
@@ -196,9 +187,8 @@ public class MainActivity extends AppCompatActivity {
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
         String url = "http://192.168.1.126:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
-        final JSONObject jsonObject;
-        //Ayo why no update github?
 
+        final JSONObject jsonObject;
         jsonObject = new JSONObject(body);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
@@ -217,6 +207,8 @@ public class MainActivity extends AppCompatActivity {
                                     leftTV.setText(String.format("+%d more", left));
                                     leftTV.setVisibility(View.VISIBLE);
                                 }
+                                
+                                //If no picture provided, use video thumbnail in imageView
                                 if (imgView.getDrawable() == null){
                                     Bitmap bmp;
                                     MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
@@ -224,7 +216,6 @@ public class MainActivity extends AppCompatActivity {
                                     bmp = mMMR.getFrameAtTime();
                                     imgView.setImageBitmap(bmp);
                                 }
-
 
                                 timer = new CountDownTimer(300*1000, 1000) {
                                     @Override
@@ -237,12 +228,7 @@ public class MainActivity extends AppCompatActivity {
 
                                     @Override
                                     public void onFinish() {
-                                        getFilesTV.setVisibility(View.INVISIBLE);
-                                        leftTV.setVisibility(View.INVISIBLE);
-                                        imgView.setImageURI(null);
-                                        imgView.setVisibility(View.INVISIBLE);
-                                        timeRemTV.setVisibility(View.INVISIBLE);
-                                        codeTV.setText("");
+                                        cleanHome();
                                     }
                                 };
                                 timer.start();
@@ -260,29 +246,19 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
                                 .show();
                         Log.i(TAG, "error: " + error);
-                        getFilesTV.setVisibility(View.INVISIBLE);
-                        leftTV.setVisibility(View.INVISIBLE);
-                        imgView.setImageURI(null);
-                        imgView.setVisibility(View.INVISIBLE);
-                        timeRemTV.setVisibility(View.INVISIBLE);
-                        codeTV.setText("");
+                        cleanHome();
 
                     }
                 });
-
-
         queue.add(jsonObjectRequest);
     }
-    private static String getRealPath(Context context, Uri uri) {
 
-        final String column = "_data";
-        String[] proj = {MediaStore.Video.Media.DATA};
-        try (Cursor cursor = context.getContentResolver().query(uri, proj, null, null, null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                final int index = cursor.getColumnIndexOrThrow(column);
-                return cursor.getString(index);
-            }
-        }
-        return null;
+    private void cleanHome(){
+        getFilesTV.setVisibility(View.INVISIBLE);
+        leftTV.setVisibility(View.INVISIBLE);
+        imgView.setImageURI(null);
+        imgView.setVisibility(View.INVISIBLE);
+        timeRemTV.setVisibility(View.INVISIBLE);
+        codeTV.setText("");
     }
 }
