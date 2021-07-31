@@ -10,11 +10,11 @@
         android:id="@+id/heading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
         android:text="☄Comet"
         android:textColor="#e7f4ff"
         android:textSize="48sp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
 
         />
 
@@ -23,12 +23,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/heading"
-        android:layout_marginTop="64dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="32dp"
         android:background="#45E7F4FF"
+        android:text="+"
         android:textColor="#e7f4ff"
         android:textSize="28sp"
-        android:layout_centerHorizontal="true"
-        android:text="+"
 
         />
 
@@ -40,55 +40,63 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="36dp"
         android:text="Get your files at:"
-        android:textSize="24sp"
         android:textColor="#e7f4ff"
-        android:visibility="invisible" />
+        android:textSize="24sp"
+        android:visibility="invisible"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/codeTV"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="000000"
-        android:textColor="#e7f4ff"
         android:layout_below="@id/getFilesTV"
         android:layout_centerHorizontal="true"
+        android:text="000000"
+        android:textColor="#e7f4ff"
         android:textSize="24sp" />
 
-    <ImageView
-        android:id="@+id/targetimage"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:textColor="#e7f4ff"
-        android:maxWidth="150dp"
-        android:maxHeight="150dp"
-        android:minWidth="50dp"
-        android:minHeight="50dp"
-        android:layout_centerHorizontal="true"
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="32dp"
         android:layout_below="@id/codeTV"
-        android:layout_marginTop="100dp"
-        />
+        android:layout_alignParentBottom="true">
 
-    <TextView
-        android:id="@+id/leftTv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/targetimage"
-        android:layout_centerHorizontal="true"
-        android:text="+3 more"
-        android:textColor="#e7f4ff"
-        android:textSize="22sp"
-        android:visibility="invisible" />
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/timeRemainingTV"
-        android:text="Time remaining: 05:00"
-        android:visibility="invisible"
-        android:textColor="#e7f4ff"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/leftTv"
-        android:layout_marginTop="25dp"
-        android:textSize="16dp"
-        />
+        <ImageView
+            android:id="@+id/targetimage"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
+            android:maxWidth="150dp"
+            android:maxHeight="150dp"
+            android:layout_centerInParent="true"
+            android:minWidth="50dp"
+            android:minHeight="50dp"
+            android:textColor="#e7f4ff" />
+
+        <TextView
+            android:id="@+id/leftTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="+3 more"
+            android:textColor="#e7f4ff"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@id/targetimage"
+            android:textSize="22sp"
+            android:visibility="invisible"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/timeRemainingTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time remaining: 05:00"
+            android:layout_below="@id/leftTv"
+            android:layout_centerHorizontal="true"
+            android:textColor="#e7f4ff"
+            android:textSize="16dp"
+            android:visibility="invisible"
+            tools:visibility="visible" />
+
+    </RelativeLayout>
 
 </RelativeLayout>

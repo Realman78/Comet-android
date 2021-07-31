@@ -3,16 +3,12 @@ package com.example.comet;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
-import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -198,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
-        String url = "http://192.168.1.254:3000/";
+        String url = "http://192.168.1.126:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
         final JSONObject jsonObject;
         //Ayo why no update github?
@@ -261,15 +257,21 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        // TODO: Handle error
+                        Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
+                                .show();
                         Log.i(TAG, "error: " + error);
+                        getFilesTV.setVisibility(View.INVISIBLE);
+                        leftTV.setVisibility(View.INVISIBLE);
+                        imgView.setImageURI(null);
+                        imgView.setVisibility(View.INVISIBLE);
+                        timeRemTV.setVisibility(View.INVISIBLE);
+                        codeTV.setText("");
 
                     }
                 });
 
 
         queue.add(jsonObjectRequest);
-        queue.start();
     }
     private static String getRealPath(Context context, Uri uri) {
 
