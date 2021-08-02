@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,21 +12,21 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:text="☄Comet"
+        android:text="@string/comet"
         android:textColor="#e7f4ff"
         android:textSize="48sp"
 
         />
 
     <Button
-        android:id="@+id/loadimage"
+        android:id="@+id/loadImage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/heading"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="32dp"
         android:background="#45E7F4FF"
-        android:text="+"
+        android:text="@string/add_files"
         android:textColor="#e7f4ff"
         android:textSize="28sp"
 
@@ -37,10 +36,10 @@
         android:id="@+id/getFilesTV"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/loadimage"
+        android:layout_below="@id/loadImage"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="36dp"
-        android:text="Get your files at:"
+        android:text="@string/get_your_files_at"
         android:textColor="#e7f4ff"
         android:textSize="24sp"
         android:visibility="invisible"
@@ -52,7 +51,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/getFilesTV"
         android:layout_centerHorizontal="true"
-        android:text="000000"
+        android:text="@string/code"
         android:textColor="#e7f4ff"
         android:textSize="24sp" />
 
@@ -64,7 +63,7 @@
         android:layout_alignParentBottom="true">
 
         <ImageView
-            android:id="@+id/targetimage"
+            android:id="@+id/targetImage"
             android:layout_width="150dp"
             android:layout_height="150dp"
             android:maxWidth="150dp"
@@ -72,7 +71,8 @@
             android:layout_centerInParent="true"
             android:minWidth="50dp"
             android:minHeight="50dp"
-            android:textColor="#e7f4ff" />
+            android:textColor="#e7f4ff"
+            android:contentDescription="@string/thumbnail" />
 
         <TextView
             android:id="@+id/leftTv"
@@ -81,7 +81,7 @@
             tools:text="+3 more"
             android:textColor="#e7f4ff"
             android:layout_centerHorizontal="true"
-            android:layout_below="@id/targetimage"
+            android:layout_below="@id/targetImage"
             android:textSize="22sp"
             android:visibility="invisible"
             tools:visibility="visible" />
@@ -90,11 +90,11 @@
             android:id="@+id/timeRemainingTV"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Time remaining: 05:00"
+            android:text="@string/time_remaining"
             android:layout_below="@id/leftTv"
             android:layout_centerHorizontal="true"
             android:textColor="#e7f4ff"
-            android:textSize="16dp"
+            android:textSize="16sp"
             android:visibility="invisible"
             tools:visibility="visible" />
 

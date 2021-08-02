@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Comet</string>
+    <string name="api_too_high_warning">Recorded videos from gallery wont work on your version</string>
+    <string name="loading_string">Loading...</string>
+    <string name="comet">☄Comet</string>
+    <string name="add_files">+</string>
+    <string name="get_your_files_at">Get your files at:</string>
+    <string name="code">000000</string>
+    <string name="thumbnail">thumbnail</string>
+    <string name="time_remaining">Time remaining: 05:00</string>
 </resources>

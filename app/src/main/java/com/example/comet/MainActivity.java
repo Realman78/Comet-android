@@ -5,9 +5,12 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -15,8 +18,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -32,77 +37,78 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.android.MediaManager;
 import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
-import com.cloudinary.utils.ObjectUtils;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
-    String TAG = "Heoking shit scoob";
-    ImageView imgView;
-    TextView codeTV;
-    TextView getFilesTV;
-    TextView leftTV;
-    TextView timeRemTV;
-    View mainLayout;
-    Button button;
-    int counter = 0;
-    CountDownTimer timer;
-    Cloudinary cloudinary;
-    int min = 100000;
-    int max = 999999;
-    Uri lastPic;
+    private final String TAG = "Heoking shit scoob";
+    private ImageView imgView;
+    private TextView codeTV;
+    private TextView getFilesTV;
+    private TextView leftTV;
+    private TextView timeRemTV;
 
-    ArrayList<Uri> mArrayUri;
+    private int counter = 0;
+    private boolean uploading = false;
+    private CountDownTimer timer;
+    static final int MIN = 100000;
+    static final int MAX = 999999;
+    static final int REQUEST_CODE = 1;
+    private Uri lastPic;
+    private ArrayList<Uri> mArrayUri;
+    private Uri largestUri = null;
+    private long maxSize = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        button = findViewById(R.id.loadimage);
-        imgView = findViewById(R.id.targetimage);
+        Button button = findViewById(R.id.loadImage);
+        imgView = findViewById(R.id.targetImage);
         codeTV = findViewById(R.id.codeTV);
         getFilesTV = findViewById(R.id.getFilesTV);
         leftTV = findViewById(R.id.leftTv);
         timeRemTV = findViewById(R.id.timeRemainingTV);
-        mainLayout = findViewById(R.id.mainLayout);
 
+        mArrayUri = new ArrayList<>();
         codeTV.setText("");
-        HashMap config = new HashMap();
+        HashMap<String, String> config = new HashMap<>();
         config.put("cloud_name", "dzmz24nr0");
-        config.put("secure", true);
+        config.put("secure", "true");
         config.put("api_key", "411549117332673");
         config.put("api_secret", "crgNRrcVJ7v6PA76-8HlbEzx5vE");
-        cloudinary = new Cloudinary(config);
+        new Cloudinary(config);
 
         MediaManager.init(this, config);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= 31){
-                    Toast.makeText(MainActivity.this, "It wont work on your version", Toast.LENGTH_SHORT).show();
-
-                }else{
-                    Intent intent = new Intent();
-                    intent.setType("*/*");
-                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    intent.setAction(Intent.ACTION_GET_CONTENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    startActivityForResult(Intent.createChooser(intent,"Select Media"), 1);
+                if (uploading){
+                    Toast.makeText(getApplicationContext(), "Please wait until the previous file uploads", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-
+                if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+                Intent intent = new Intent();
+                intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                String[] extraMimeTypes = {"image/*", "video/*", "application/pdf", "text/plain", "audio/*"};
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, extraMimeTypes);
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                startActivityForResult(intent, REQUEST_CODE);
             }
         });
-        if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-
         if (Build.VERSION.SDK_INT >= 29){
+            timeRemTV.setText(getString(R.string.api_too_high_warning));
             Toast.makeText(getApplicationContext(), "Recorded videos from gallery wont work", Toast.LENGTH_LONG).show();
         }else{
             button.performClick();
@@ -110,33 +116,72 @@ public class MainActivity extends AppCompatActivity {
         
     }
 
+    private String getMimeType(Context context, Uri uri) {
+        String extension;
+
+        //Check uri format to avoid null
+        if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
+            //If scheme is a content
+            final MimeTypeMap mime = MimeTypeMap.getSingleton();
+            extension = mime.getExtensionFromMimeType(context.getContentResolver().getType(uri));
+        } else {
+            //If scheme is a File
+            //This will replace white spaces with %20 and also other special characters. This will avoid returning null values on file name with spaces and special characters.
+            extension = MimeTypeMap.getFileExtensionFromUrl(Uri.fromFile(new File(uri.getPath())).toString());
+
+        }
+
+        return extension;
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
         try {
             // When an Image is picked
-            if (requestCode == 1 && resultCode == RESULT_OK && null != data) {
-                mArrayUri = new ArrayList<>();
+            if (requestCode == REQUEST_CODE && resultCode == RESULT_OK && null != data) {
+                mArrayUri.clear();
                 cleanHome();
-                codeTV.setText("Loading...");
+                uploading = true;
+                codeTV.setText(getString(R.string.loading_string));
                 if (timer != null) timer.cancel();
 
                 if (data.getClipData() != null) {
-                    int cout = data.getClipData().getItemCount();
-                    for (int i = 0; i < cout; i++) {
-                        Uri imageurl = data.getClipData().getItemAt(i).getUri();
-                        mArrayUri.add(imageurl);
+                    int count = data.getClipData().getItemCount();
+                    for (int i = 0; i < count; i++) {
+                        Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                        Log.i(TAG, "onActivityResult: URI: " + getMimeType(getApplicationContext(), imageUri));
+                        long size;
+
+                        if (imageUri.getScheme().equals("file")){
+                            size = getFileSize(imageUri);
+                        }else{
+                            size = getVideoSize(imageUri);
+                            if (size == 0){
+                                size = getImageSize(imageUri);
+                            }
+                        }
+                        if (size == 0){
+                            size = getAudioSize(getApplicationContext(), imageUri);
+                        }
+                        if (size > maxSize){
+                            maxSize = size;
+                            largestUri = imageUri;
+                        }
+                        mArrayUri.add(imageUri);
                     }
                 } else {
-                    Uri imageurl = data.getData();
-                    mArrayUri.add(imageurl);
+                    Uri imageUri = data.getData();
+                    mArrayUri.add(imageUri);
                 }
 
-                final int code = new Random().nextInt((max - min) + 1) + min;
+                final int code = new Random().nextInt((MAX - MIN) + 1) + MIN;
                 counter = 0;
+                HashMap<String, String> options = new HashMap<>();
+                options.put("resource_type", "auto");
                 for (final Uri tmpUri : mArrayUri){
                     MediaManager.get().upload(tmpUri)
-                            .options(ObjectUtils.asMap("resource_type", "auto"))
+                            .options(options)
                             .unsigned("julve1gi")
                             .callback(new UploadCallback() {
                                 @Override
@@ -146,19 +191,25 @@ public class MainActivity extends AppCompatActivity {
 
                                 @Override
                                 public void onProgress(String requestId, long bytes, long totalBytes) {
-
+                                    if (tmpUri == largestUri || maxSize == 0) {
+                                        Long percentage = (long) ((float) bytes / totalBytes * 100);
+                                        codeTV.setText(String.format("Uploading...  %s%%", percentage));
+                                    }
                                 }
 
                                 @Override
                                 public void onSuccess(String requestId, Map resultData) {
-                                    resultData.put("code", code + "");
+                                    resultData.put("code", Integer.toString(code));
+                                    resultData.put("extension", getMimeType(getApplicationContext(), tmpUri));
                                     lastPic = tmpUri;
                                     request(resultData, mArrayUri.size()-1, tmpUri);
                                 }
 
                                 @Override
                                 public void onError(String requestId, ErrorInfo error) {
-
+                                    Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
+                                            .show();
+                                    cleanHome();
                                 }
 
                                 @Override
@@ -170,9 +221,8 @@ public class MainActivity extends AppCompatActivity {
                 }
 
             } else {
-                Toast.makeText(this, "You haven't picked Image",
-                        Toast.LENGTH_LONG).show();
-                cleanHome();
+                Toast.makeText(this, "You haven't picked an Image/Video",
+                        Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -180,27 +230,27 @@ public class MainActivity extends AppCompatActivity {
                     .show();
             cleanHome();
         }
-
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     public void request(Map<String, String> body, final int left, final Uri showImageUri){
-        String url = "http://192.168.1.126:3000/";
         RequestQueue queue = Volley.newRequestQueue(this);
 
-        final JSONObject jsonObject;
-        jsonObject = new JSONObject(body);
+        final JSONObject jsonObject = new JSONObject(body);
+        String URL = "https://fcomet.herokuapp.com/";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                (Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
+                (Request.Method.POST, URL, jsonObject, new Response.Listener<JSONObject>() {
 
-                    @SuppressLint("DefaultLocale")
+                    @SuppressLint({"DefaultLocale", "SetTextI18n"})
                     @Override
                     public void onResponse(JSONObject response) {
                         try {
                             if (counter++ == left || left == 0){
-                                codeTV.setText(response.getString("code"));
+                                uploading = false;
+                                codeTV.setText("fcomet.herokuapp.com/"+response.getString("code"));
                                 getFilesTV.setVisibility(View.VISIBLE);
                                 imgView.setImageURI(showImageUri);
+                                Log.i(TAG, "onResponse: imageuri" + showImageUri);
+
                                 imgView.setVisibility(View.VISIBLE);
                                 timeRemTV.setVisibility(View.VISIBLE);
                                 if (left >= 1){
@@ -209,12 +259,21 @@ public class MainActivity extends AppCompatActivity {
                                 }
                                 
                                 //If no picture provided, use video thumbnail in imageView
+                                Log.i(TAG, "onResponse: drawable" + imgView.getDrawable());
                                 if (imgView.getDrawable() == null){
-                                    Bitmap bmp;
-                                    MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
-                                    mMMR.setDataSource(getApplicationContext(), lastPic);
-                                    bmp = mMMR.getFrameAtTime();
-                                    imgView.setImageBitmap(bmp);
+                                    try{
+                                        Bitmap bmp;
+                                        MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
+                                        mMMR.setDataSource(getApplicationContext(), lastPic);
+                                        bmp = mMMR.getFrameAtTime();
+                                        imgView.setImageBitmap(bmp);
+                                        if (bmp == null){
+                                            imgView.setBackgroundResource(R.drawable.file);
+                                        }
+                                    }catch (Exception e){
+                                        e.printStackTrace();
+                                        imgView.setBackgroundResource(R.drawable.file);
+                                    }
                                 }
 
                                 timer = new CountDownTimer(300*1000, 1000) {
@@ -234,9 +293,9 @@ public class MainActivity extends AppCompatActivity {
                                 timer.start();
                             }
 
-
-                            } catch (JSONException e) {
+                            } catch (Exception e) {
                                 e.printStackTrace();
+                                imgView.setBackgroundResource(R.drawable.file);
                             }
                     }
                 }, new Response.ErrorListener() {
@@ -247,18 +306,76 @@ public class MainActivity extends AppCompatActivity {
                                 .show();
                         Log.i(TAG, "error: " + error);
                         cleanHome();
-
                     }
                 });
         queue.add(jsonObjectRequest);
+    }
+
+    private long getVideoSize(Uri uri){
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try{
+            retriever.setDataSource(getApplicationContext(), uri);
+            if (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != null){
+                long bitrate = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE));
+                long duration = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+                return ((long) bitrate / 8 * duration / 1000/1000);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+    private long getImageSize(Uri uri) {
+        try{
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
+
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+            byte[] imageInByte = stream.toByteArray();
+            return imageInByte.length;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    private long getFileSize(Uri uri){
+        try{
+            return new File(String.valueOf(uri)).length();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    private long getAudioSize(Context context, Uri uri) {
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Audio.Media.SIZE };
+            cursor = context.getContentResolver().query(uri, proj, null, null, null);
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE);
+            cursor.moveToFirst();
+            return Long.parseLong(cursor.getString(column_index));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return 0;
     }
 
     private void cleanHome(){
         getFilesTV.setVisibility(View.INVISIBLE);
         leftTV.setVisibility(View.INVISIBLE);
         imgView.setImageURI(null);
+        imgView.setBackgroundResource(0);
         imgView.setVisibility(View.INVISIBLE);
         timeRemTV.setVisibility(View.INVISIBLE);
         codeTV.setText("");
+        uploading = false;
+        maxSize = 0;
     }
 }
