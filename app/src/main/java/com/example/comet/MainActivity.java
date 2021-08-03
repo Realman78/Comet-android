@@ -14,6 +14,9 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -83,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
         mArrayUri = new ArrayList<>();
         codeTV.setText("");
+
         HashMap<String, String> config = new HashMap<>();
         config.put("cloud_name", "dzmz24nr0");
         config.put("secure", "true");
@@ -113,6 +117,14 @@ public class MainActivity extends AppCompatActivity {
         else
             openChooser();
         button.setEnabled(true);
+    }
+
+    private boolean isConnectedToInternet(){
+        ConnectivityManager cm =
+                (ConnectivityManager)getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
     private void openChooser() {
@@ -220,7 +232,8 @@ public class MainActivity extends AppCompatActivity {
 
                                 @Override
                                 public void onError(String requestId, ErrorInfo error) {
-                                    Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
+                                    String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
+                                    Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
                                             .show();
                                     cleanHome();
                                 }
@@ -239,7 +252,8 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
+            String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
+            Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
                     .show();
             cleanHome();
         }
@@ -314,7 +328,8 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getApplicationContext(), "Something went wrong", Toast.LENGTH_LONG)
+                        String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
+                        Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
                                 .show();
                         Log.i(TAG, "error: " + error);
                         cleanHome();
