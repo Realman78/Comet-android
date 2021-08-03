@@ -7,7 +7,6 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 
@@ -16,14 +15,13 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.View;
-import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -112,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         codeTV.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                if (codeTV.getVisibility() == View.VISIBLE && codeTV.getText().toString().contains("fcomet")){
+                if (codeTV.getVisibility() == View.VISIBLE && !codeTV.getText().toString().contains("Loading") && !codeTV.getText().toString().contains("Uploading")){
                     ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                     ClipData clip = ClipData.newPlainText("link", URL+code);
                     clipboard.setPrimaryClip(clip);
@@ -121,34 +119,33 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
-        if (Build.VERSION.SDK_INT >= 29){
-            timeRemTV.setText(getString(R.string.api_too_high_warning));
-            Toast.makeText(getApplicationContext(), "Recorded videos from gallery wont work", Toast.LENGTH_LONG).show();
-        }else{
-            if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-            else
-                button.performClick();
-        }
-        
+
+        if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+        else
+            button.performClick();
     }
 
-    private String getMimeType(Context context, Uri uri) {
-        String extension;
-
-        //Check uri format to avoid null
-        if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
-            //If scheme is a content
-            final MimeTypeMap mime = MimeTypeMap.getSingleton();
-            extension = mime.getExtensionFromMimeType(context.getContentResolver().getType(uri));
-        } else {
-            //If scheme is a File
-            //This will replace white spaces with %20 and also other special characters. This will avoid returning null values on file name with spaces and special characters.
-            extension = MimeTypeMap.getFileExtensionFromUrl(Uri.fromFile(new File(uri.getPath())).toString());
-
+    private String getFileName(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                }
+            } finally {
+                cursor.close();
+            }
         }
-
-        return extension;
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result.lastIndexOf('/');
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -216,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                                 @Override
                                 public void onSuccess(String requestId, Map resultData) {
                                     resultData.put("code", Integer.toString(code));
-                                    resultData.put("extension", getMimeType(getApplicationContext(), tmpUri));
+                                    resultData.put("fileName", getFileName(tmpUri));
                                     lastPic = tmpUri;
                                     request(resultData, mArrayUri.size()-1, tmpUri);
                                 }
@@ -275,7 +272,6 @@ public class MainActivity extends AppCompatActivity {
                                 }
                                 
                                 //If no picture provided, use video thumbnail in imageView
-                                Log.i(TAG, "onResponse: drawable" + imgView.getDrawable());
                                 if (imgView.getDrawable() == null){
                                     try{
                                         Bitmap bmp;
@@ -334,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
             if (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != null){
                 long bitrate = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE));
                 long duration = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-                return (bitrate / 8 * duration / 1000/1000);
+                return (bitrate / 8 * duration / 1000);
             }
         }catch (Exception e){
             e.printStackTrace();
