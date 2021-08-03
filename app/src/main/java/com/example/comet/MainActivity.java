@@ -5,6 +5,8 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -62,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
     static final int MIN = 100000;
     static final int MAX = 999999;
     static final int REQUEST_CODE = 1;
+    static final String URL = "https://fcomet.herokuapp.com/";
+    String code = "";
     private Uri lastPic;
     private ArrayList<Uri> mArrayUri;
     private Uri largestUri = null;
@@ -95,23 +99,36 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Please wait until the previous file uploads", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
-                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
                 Intent intent = new Intent();
                 intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
-                String[] extraMimeTypes = {"image/*", "video/*", "application/pdf", "text/plain", "audio/*"};
+                String[] extraMimeTypes = {"image/*", "video/*", "application/*", "text/*", "audio/*"};
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, extraMimeTypes);
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 startActivityForResult(intent, REQUEST_CODE);
+            }
+        });
+        codeTV.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                if (codeTV.getVisibility() == View.VISIBLE && codeTV.getText().toString().contains("fcomet")){
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("link", URL+code);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(getApplicationContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+                return false;
             }
         });
         if (Build.VERSION.SDK_INT >= 29){
             timeRemTV.setText(getString(R.string.api_too_high_warning));
             Toast.makeText(getApplicationContext(), "Recorded videos from gallery wont work", Toast.LENGTH_LONG).show();
         }else{
-            button.performClick();
+            if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+            else
+                button.performClick();
         }
         
     }
@@ -150,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
                     int count = data.getClipData().getItemCount();
                     for (int i = 0; i < count; i++) {
                         Uri imageUri = data.getClipData().getItemAt(i).getUri();
-                        Log.i(TAG, "onActivityResult: URI: " + getMimeType(getApplicationContext(), imageUri));
                         long size;
 
                         if (imageUri.getScheme().equals("file")){
@@ -236,7 +252,6 @@ public class MainActivity extends AppCompatActivity {
         RequestQueue queue = Volley.newRequestQueue(this);
 
         final JSONObject jsonObject = new JSONObject(body);
-        String URL = "https://fcomet.herokuapp.com/";
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.POST, URL, jsonObject, new Response.Listener<JSONObject>() {
 
@@ -246,10 +261,11 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             if (counter++ == left || left == 0){
                                 uploading = false;
-                                codeTV.setText("fcomet.herokuapp.com/"+response.getString("code"));
+                                code = response.getString("code");
+                                codeTV.setText("fcomet.herokuapp.com\n\nCode: "+ code);
                                 getFilesTV.setVisibility(View.VISIBLE);
                                 imgView.setImageURI(showImageUri);
-                                Log.i(TAG, "onResponse: imageuri" + showImageUri);
+                                Toast.makeText(getApplicationContext(), "Long press the link to copy", Toast.LENGTH_SHORT).show();
 
                                 imgView.setVisibility(View.VISIBLE);
                                 timeRemTV.setVisibility(View.VISIBLE);
@@ -318,7 +334,7 @@ public class MainActivity extends AppCompatActivity {
             if (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) != null){
                 long bitrate = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE));
                 long duration = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-                return ((long) bitrate / 8 * duration / 1000/1000);
+                return (bitrate / 8 * duration / 1000/1000);
             }
         }catch (Exception e){
             e.printStackTrace();
