@@ -74,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Button button = findViewById(R.id.loadImage);
+        button.setEnabled(false);
         imgView = findViewById(R.id.targetImage);
         codeTV = findViewById(R.id.codeTV);
         getFilesTV = findViewById(R.id.getFilesTV);
@@ -90,40 +91,39 @@ public class MainActivity extends AppCompatActivity {
         new Cloudinary(config);
 
         MediaManager.init(this, config);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (uploading){
-                    Toast.makeText(getApplicationContext(), "Please wait until the previous file uploads", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Intent intent = new Intent();
-                intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
-                String[] extraMimeTypes = {"image/*", "video/*", "application/*", "text/*", "audio/*"};
-                intent.putExtra(Intent.EXTRA_MIME_TYPES, extraMimeTypes);
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                startActivityForResult(intent, REQUEST_CODE);
+        button.setOnClickListener(v -> {
+            if (uploading){
+                Toast.makeText(getApplicationContext(), "Please wait until the previous file uploads", Toast.LENGTH_SHORT).show();
+                return;
             }
+            openChooser();
         });
-        codeTV.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                if (codeTV.getVisibility() == View.VISIBLE && !codeTV.getText().toString().contains("Loading") && !codeTV.getText().toString().contains("Uploading")){
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("link", URL+code);
-                    clipboard.setPrimaryClip(clip);
-                    Toast.makeText(getApplicationContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
-                }
-                return false;
+        codeTV.setOnLongClickListener(v -> {
+            if (codeTV.getVisibility() == View.VISIBLE && !codeTV.getText().toString().contains("Loading") && !codeTV.getText().toString().contains("Uploading")){
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("link", URL+code);
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(getApplicationContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
             }
+            return false;
         });
 
         if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
         else
-            button.performClick();
+            openChooser();
+        button.setEnabled(true);
+    }
+
+    private void openChooser() {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        String[] extraMimeTypes = {"image/*", "video/*", "application/*", "text/*", "audio/*"};
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, extraMimeTypes);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        startActivityForResult(intent, REQUEST_CODE);
     }
 
     private String getFileName(Uri uri) {
