@@ -1,104 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#2c343c"
-    android:id="@+id/mainLayout"
     tools:context=".MainActivity">
+
     <TextView
         android:id="@+id/heading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
+        android:layout_marginBottom="10dp"
         android:text="@string/comet"
         android:textColor="#e7f4ff"
         android:textSize="48sp"
-
-        />
+        app:layout_constraintBottom_toTopOf="@+id/loadImage"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="spread" />
 
     <Button
         android:id="@+id/loadImage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/heading"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="32dp"
         android:background="@drawable/round_button"
+
         android:text="@string/add_files"
         android:textColor="#e7f4ff"
         android:textSize="28sp"
-
-        />
+        app:layout_constraintBottom_toTopOf="@+id/getFilesTV"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/heading" />
 
     <TextView
         android:id="@+id/getFilesTV"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/loadImage"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="36dp"
         android:text="@string/get_your_files_at"
         android:textColor="#e7f4ff"
         android:textSize="18sp"
         android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/codeTV"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/loadImage"
         tools:visibility="visible" />
 
     <TextView
         android:id="@+id/codeTV"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/getFilesTV"
-        android:layout_centerHorizontal="true"
         android:text="@string/code"
         android:textAlignment="center"
         android:textColor="#e7f4ff"
-        android:textSize="24sp" />
+        android:textSize="24sp"
+        app:layout_constraintBottom_toTopOf="@+id/targetImage"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/getFilesTV" />
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginBottom="32dp"
-        android:layout_below="@id/codeTV"
-        android:layout_alignParentBottom="true">
 
-        <ImageView
-            android:id="@+id/targetImage"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            android:maxWidth="150dp"
-            android:maxHeight="150dp"
-            android:layout_centerInParent="true"
-            android:minWidth="50dp"
-            android:minHeight="50dp"
-            android:textColor="#e7f4ff"
-            android:contentDescription="@string/thumbnail" />
+    <ImageView
+        android:id="@+id/targetImage"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/thumbnail"
+        android:layout_marginTop="5dp"
+        android:textColor="#e7f4ff"
+        app:layout_constraintBottom_toTopOf="@+id/leftTv"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/codeTV" />
 
-        <TextView
-            android:id="@+id/leftTv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="+3 more"
-            android:textColor="#e7f4ff"
-            android:layout_centerHorizontal="true"
-            android:layout_below="@id/targetImage"
-            android:textSize="22sp"
-            android:visibility="invisible"
-            tools:visibility="visible" />
+    <TextView
+        android:id="@+id/leftTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#e7f4ff"
+        android:textSize="22sp"
+        android:visibility="invisible"
+        android:layout_marginBottom="5dp"
+        app:layout_constraintBottom_toTopOf="@+id/timeRemainingTV"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/targetImage"
+        tools:text="+3 more"
+        tools:visibility="visible" />
 
-        <TextView
-            android:id="@+id/timeRemainingTV"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/time_remaining"
-            android:layout_below="@id/leftTv"
-            android:layout_centerHorizontal="true"
-            android:textColor="#e7f4ff"
-            android:textSize="16sp"
-            android:visibility="invisible"
-            tools:visibility="visible" />
+    <TextView
+        android:id="@+id/timeRemainingTV"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/time_remaining"
+        android:textColor="#e7f4ff"
+        android:textSize="16sp"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/leftTv"
+        tools:visibility="visible" />
 
-    </RelativeLayout>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,4 +1,4 @@
-package com.example.comet;
+package com.marin.comet;
 
 import android.content.Context;
 

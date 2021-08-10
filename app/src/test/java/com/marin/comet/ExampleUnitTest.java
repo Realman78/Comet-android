@@ -1,4 +1,4 @@
-package com.example.comet;
+package com.marin.comet;
 
 import org.junit.Test;
 

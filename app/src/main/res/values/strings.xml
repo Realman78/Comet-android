@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Comet</string>
+    <string name="app_name">UpComet</string>
     <string name="api_too_high_warning">App might not work 100% on your android version</string>
-    <string name="loading_string">Loading...</string>
-    <string name="comet">☄Comet</string>
+    <string name="loading_string">Loading…</string>
+    <string name="comet">☄UpComet</string>
     <string name="add_files">+</string>
     <string name="get_your_files_at">Get your files at:</string>
     <string name="code">000000</string>

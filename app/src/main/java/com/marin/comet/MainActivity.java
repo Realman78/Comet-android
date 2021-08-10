@@ -1,4 +1,4 @@
-package com.example.comet;
+package com.marin.comet;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -13,9 +13,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.media.MediaMetadataRetriever;
 import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
@@ -25,6 +25,8 @@ import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -65,12 +67,14 @@ public class MainActivity extends AppCompatActivity {
     static final int MIN = 100000;
     static final int MAX = 999999;
     static final int REQUEST_CODE = 1;
-    static final String URL = "https://fcomet.herokuapp.com/";
+    static final int MAX_SIZE = 50000000;
+    static final String URL = "https://upcomet.herokuapp.com/";
     String code = "";
     private Uri lastPic;
     private ArrayList<Uri> mArrayUri;
     private Uri largestUri = null;
     private long maxSize = 0;
+    private long batch_size = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,6 +90,19 @@ public class MainActivity extends AppCompatActivity {
 
         mArrayUri = new ArrayList<>();
         codeTV.setText("");
+        Window window = MainActivity.this.getWindow();
+
+// clear FLAG_TRANSLUCENT_STATUS flag:
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+
+// add FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS flag to the window
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+
+// finally change the color
+        window.setStatusBarColor(Color.rgb(44, 52, 60));
+
+        if (!isConnectedToInternet())
+            Toast.makeText(getApplicationContext(), "Please connect to the internet otherwise you won't be able to use the app", Toast.LENGTH_LONG).show();
 
         HashMap<String, String> config = new HashMap<>();
         config.put("cloud_name", "dzmz24nr0");
@@ -193,12 +210,32 @@ public class MainActivity extends AppCompatActivity {
                             maxSize = size;
                             largestUri = imageUri;
                         }
+                        batch_size+=size;
                         mArrayUri.add(imageUri);
                     }
                 } else {
                     Uri imageUri = data.getData();
+                    long size =0;
+                    if (imageUri.getScheme().equals("file")){
+                        size = getFileSize(imageUri);
+                    }else{
+                        size = getVideoSize(imageUri);
+                        if (size == 0){
+                            size = getImageSize(imageUri);
+                        }
+                    }
+                    if (size == 0){
+                        size = getAudioSize(getApplicationContext(), imageUri);
+                    }
+                    batch_size += size;
                     mArrayUri.add(imageUri);
                 }
+                if (batch_size > MAX_SIZE){
+                    Toast.makeText(getApplicationContext(), "Files too large, max size 50MB", Toast.LENGTH_SHORT).show();
+                    cleanHome();
+                    return;
+                }
+
 
                 final int code = new Random().nextInt((MAX - MIN) + 1) + MIN;
                 counter = 0;
@@ -273,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
                             if (counter++ == left || left == 0){
                                 uploading = false;
                                 code = response.getString("code");
-                                codeTV.setText("fcomet.herokuapp.com\n\nCode: "+ code);
+                                codeTV.setText("upcomet.herokuapp.com\n\nCode: "+ code);
                                 getFilesTV.setVisibility(View.VISIBLE);
                                 imgView.setImageURI(showImageUri);
                                 Toast.makeText(getApplicationContext(), "Long press the link to copy", Toast.LENGTH_SHORT).show();
@@ -404,5 +441,6 @@ public class MainActivity extends AppCompatActivity {
         codeTV.setText("");
         uploading = false;
         maxSize = 0;
+        batch_size = 0;
     }
 }
