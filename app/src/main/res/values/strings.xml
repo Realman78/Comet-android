@@ -3,9 +3,11 @@
     <string name="api_too_high_warning">App might not work 100% on your android version</string>
     <string name="loading_string">Loading…</string>
     <string name="comet">☄UpComet</string>
-    <string name="add_files">+</string>
+    <string name="add_files">Upload</string>
+    <string name="download_files">Get files</string>
     <string name="get_your_files_at">Get your files at:</string>
     <string name="code">000000</string>
     <string name="thumbnail">thumbnail</string>
     <string name="time_remaining">Time remaining: 05:00</string>
+    <string name="_6_digit_code">6-digit code</string>
 </resources>

@@ -16,27 +16,58 @@
         android:text="@string/comet"
         android:textColor="#e7f4ff"
         android:textSize="48sp"
-        app:layout_constraintBottom_toTopOf="@+id/loadImage"
+        app:layout_constraintBottom_toTopOf="@+id/test"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_chainStyle="spread" />
 
-    <Button
-        android:id="@+id/loadImage"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/test"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/round_button"
 
-        android:text="@string/add_files"
-        android:textColor="#e7f4ff"
-        android:textSize="28sp"
         app:layout_constraintBottom_toTopOf="@+id/getFilesTV"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/heading" />
+        app:layout_constraintTop_toBottomOf="@+id/heading">
+
+        <Button
+            android:id="@+id/getFilesButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/round_button"
+            android:text="@string/download_files"
+            android:layout_marginStart="10dp"
+            android:textColor="#e7f4ff"
+            android:textSize="16sp"
+
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/loadImage"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/loadImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/round_button"
+            android:text="@string/add_files"
+            android:textColor="#e7f4ff"
+            android:layout_marginEnd="10dp"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/getFilesButton"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <TextView
         android:id="@+id/getFilesTV"
@@ -50,7 +81,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/loadImage"
+        app:layout_constraintTop_toBottomOf="@+id/test"
         tools:visibility="visible" />
 
     <TextView
@@ -72,9 +103,9 @@
         android:id="@+id/targetImage"
         android:layout_width="150dp"
         android:layout_height="150dp"
+        android:layout_marginTop="5dp"
         android:adjustViewBounds="true"
         android:contentDescription="@string/thumbnail"
-        android:layout_marginTop="5dp"
         android:textColor="#e7f4ff"
         app:layout_constraintBottom_toTopOf="@+id/leftTv"
         app:layout_constraintEnd_toEndOf="parent"
@@ -86,10 +117,10 @@
         android:id="@+id/leftTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
         android:textColor="#e7f4ff"
         android:textSize="22sp"
         android:visibility="invisible"
-        android:layout_marginBottom="5dp"
         app:layout_constraintBottom_toTopOf="@+id/timeRemainingTV"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
@@ -112,6 +143,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/leftTv"
         tools:visibility="visible" />
+
+
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

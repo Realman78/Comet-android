@@ -1,15 +1,14 @@
 package com.marin.comet;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -20,22 +19,29 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.cloudinary.Cloudinary;
@@ -44,7 +50,6 @@ import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 
 import org.json.JSONObject;
-
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -60,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView getFilesTV;
     private TextView leftTV;
     private TextView timeRemTV;
+    private EditText codeET;
+    private DownloadManager manager;
 
     private int counter = 0;
     private boolean uploading = false;
@@ -68,14 +75,17 @@ public class MainActivity extends AppCompatActivity {
     static final int MAX = 999999;
     static final int REQUEST_CODE = 1;
     static final int MAX_SIZE = 50000000;
-    static final String URL = "https://upcomet.herokuapp.com/";
+    static final String URL = "http://192.168.1.5:3000/";
     String code = "";
     private Uri lastPic;
     private ArrayList<Uri> mArrayUri;
     private Uri largestUri = null;
     private long maxSize = 0;
+    private long reference;
     private long batch_size = 0;
 
+
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,31 +97,62 @@ public class MainActivity extends AppCompatActivity {
         getFilesTV = findViewById(R.id.getFilesTV);
         leftTV = findViewById(R.id.leftTv);
         timeRemTV = findViewById(R.id.timeRemainingTV);
+        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        Button getFilesButton = findViewById(R.id.getFilesButton);
 
         mArrayUri = new ArrayList<>();
         codeTV.setText("");
+
+        //Status bar color change
         Window window = MainActivity.this.getWindow();
-
-// clear FLAG_TRANSLUCENT_STATUS flag:
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
-
-// add FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS flag to the window
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-
-// finally change the color
         window.setStatusBarColor(Color.rgb(44, 52, 60));
 
         if (!isConnectedToInternet())
             Toast.makeText(getApplicationContext(), "Please connect to the internet otherwise you won't be able to use the app", Toast.LENGTH_LONG).show();
 
         HashMap<String, String> config = new HashMap<>();
-        config.put("cloud_name", "dzmz24nr0");
+        config.put("cloud_name", "");
         config.put("secure", "true");
-        config.put("api_key", "411549117332673");
-        config.put("api_secret", "crgNRrcVJ7v6PA76-8HlbEzx5vE");
+        config.put("api_key", "");
+        config.put("api_secret", "");
         new Cloudinary(config);
 
         MediaManager.init(this, config);
+
+        //Popup section
+        getFilesButton.setOnClickListener(v ->{
+            LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
+            @SuppressLint("InflateParams") View popupView = inflater.inflate(R.layout.popup_window, null);
+
+            int width = LinearLayout.LayoutParams.WRAP_CONTENT;
+            int height = LinearLayout.LayoutParams.WRAP_CONTENT;
+            final PopupWindow popupWindow = new PopupWindow(popupView, width, height, true);
+
+            popupWindow.showAtLocation(imgView, Gravity.CENTER, 0, 0);
+            codeET = popupView.findViewById(R.id.codeET);
+
+            codeET.requestFocus();
+            showKeyboard();
+            toggleBackground(View.INVISIBLE);
+            codeET.setOnKeyListener((view, i, keyEvent) -> {
+                if (codeET.getText().length() == 6){
+                    popupWindow.dismiss();
+                    requestCrater(codeET.getText().toString());
+                }
+                return false;
+            });
+            popupWindow.setOnDismissListener(() -> {
+                closeKeyboard();
+                toggleBackground(View.VISIBLE);
+            });
+            // dismiss the popup window when touched
+            popupView.setOnTouchListener((v1, event) -> {
+                popupWindow.dismiss();
+                return true;
+            });
+        });
         button.setOnClickListener(v -> {
             if (uploading){
                 Toast.makeText(getApplicationContext(), "Please wait until the previous file uploads", Toast.LENGTH_SHORT).show();
@@ -119,21 +160,86 @@ public class MainActivity extends AppCompatActivity {
             }
             openChooser();
         });
-        codeTV.setOnLongClickListener(v -> {
+        //Link copy section
+        codeTV.setOnClickListener(v -> {
             if (codeTV.getVisibility() == View.VISIBLE && !codeTV.getText().toString().contains("Loading") && !codeTV.getText().toString().contains("Uploading")){
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("link", URL+code);
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(getApplicationContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
             }
-            return false;
         });
 
         if(ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+
+        /*
+        Open gallery ASA app opened disabled because of the "get files" feature
         else
-            openChooser();
+           openChooser();
+        */
         button.setEnabled(true);
+    }
+
+    private void requestCrater(String inputted){
+        String checkUrl = URL + inputted + "/get";
+        RequestQueue queue = Volley.newRequestQueue(this);
+        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(checkUrl, response -> {
+            for (int i = 0; i < response.length(); i++){
+                try {
+                    manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                    Uri uri = Uri.parse(response.getJSONObject(i).get("url").toString());
+                    DownloadManager.Request request = new DownloadManager.Request(uri)
+                            .setTitle(response.getJSONObject(i).get("fileName").toString())
+                            .setDescription("Upcomet download")
+                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                            .setAllowedOverMetered(true)
+                            .setAllowedOverRoaming(true);
+                    reference = manager.enqueue(request);
+                    Log.i(TAG, "onResponse: ref" + reference);
+                } catch (Exception e) {
+                    String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
+                    Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
+                            .show();
+                    Log.i(TAG, "error: " + e);
+                    cleanHome();
+                }
+            }
+            Log.i(TAG, "onResponse: CKECK: " + response.toString());
+        }, error -> {
+            String errorMessage = isConnectedToInternet() ? "No files with the code " + inputted : "Something went wrong, check your internet connection";
+            Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
+                    .show();
+            Log.i(TAG, "error: " + error);
+            cleanHome();
+        });
+
+
+// Access the RequestQueue through your singleton class.
+       queue.add(jsonArrayRequest);
+    }
+
+    private final BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+            if (id == reference){
+                Toast.makeText(getApplicationContext(), "Download completed!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
+    private void toggleBackground(int visibilty){
+        getFilesTV.setVisibility(visibilty);
+        codeTV.setVisibility(visibilty);
+        imgView.setVisibility(visibilty);
+        leftTV.setVisibility(visibilty);
+        getFilesTV.setVisibility(visibilty);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(onDownloadComplete);
     }
 
     private boolean isConnectedToInternet(){
@@ -144,6 +250,16 @@ public class MainActivity extends AppCompatActivity {
         return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
     }
 
+    public void showKeyboard(){
+        InputMethodManager inputMethodManager = (InputMethodManager) getApplicationContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+    }
+
+    public void closeKeyboard(){
+        InputMethodManager inputMethodManager = (InputMethodManager) getApplicationContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputMethodManager.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, 0);
+        codeET.clearFocus();
+    }
     private void openChooser() {
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_OPEN_DOCUMENT);
@@ -157,16 +273,12 @@ public class MainActivity extends AppCompatActivity {
 
     private String getFileName(Uri uri) {
         String result = null;
-        if (uri.getScheme().equals("content")) {
-            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-            try {
+        if (uri.getScheme().equals("content"))
+            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
                     result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
                 }
-            } finally {
-                cursor.close();
             }
-        }
         if (result == null) {
             result = uri.getPath();
             int cut = result.lastIndexOf('/');
@@ -215,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else {
                     Uri imageUri = data.getData();
-                    long size =0;
+                    long size;
                     if (imageUri.getScheme().equals("file")){
                         size = getFileSize(imageUri);
                     }else{
@@ -301,76 +413,68 @@ public class MainActivity extends AppCompatActivity {
 
         final JSONObject jsonObject = new JSONObject(body);
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
-                (Request.Method.POST, URL, jsonObject, new Response.Listener<JSONObject>() {
+                (Request.Method.POST, URL, jsonObject, response -> {
+                    try {
+                        if (counter++ == left || left == 0){
+                            uploading = false;
+                            code = response.getString("code");
+                            codeTV.setText("upcomet.herokuapp.com\nCode: "+ code);
+                            getFilesTV.setVisibility(View.VISIBLE);
+                            imgView.setImageURI(showImageUri);
+                            Toast.makeText(getApplicationContext(), "Press the link to copy", Toast.LENGTH_SHORT).show();
 
-                    @SuppressLint({"DefaultLocale", "SetTextI18n"})
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        try {
-                            if (counter++ == left || left == 0){
-                                uploading = false;
-                                code = response.getString("code");
-                                codeTV.setText("upcomet.herokuapp.com\n\nCode: "+ code);
-                                getFilesTV.setVisibility(View.VISIBLE);
-                                imgView.setImageURI(showImageUri);
-                                Toast.makeText(getApplicationContext(), "Long press the link to copy", Toast.LENGTH_SHORT).show();
+                            imgView.setVisibility(View.VISIBLE);
+                            timeRemTV.setVisibility(View.VISIBLE);
+                            if (left >= 1){
+                                leftTV.setText(String.format("+%d more", left));
+                                leftTV.setVisibility(View.VISIBLE);
+                            }
 
-                                imgView.setVisibility(View.VISIBLE);
-                                timeRemTV.setVisibility(View.VISIBLE);
-                                if (left >= 1){
-                                    leftTV.setText(String.format("+%d more", left));
-                                    leftTV.setVisibility(View.VISIBLE);
-                                }
-                                
-                                //If no picture provided, use video thumbnail in imageView
-                                if (imgView.getDrawable() == null){
-                                    try{
-                                        Bitmap bmp;
-                                        MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
-                                        mMMR.setDataSource(getApplicationContext(), lastPic);
-                                        bmp = mMMR.getFrameAtTime();
-                                        imgView.setImageBitmap(bmp);
-                                        if (bmp == null){
-                                            imgView.setBackgroundResource(R.drawable.file);
-                                        }
-                                    }catch (Exception e){
-                                        e.printStackTrace();
+                            //If no picture provided, use video thumbnail in imageView
+                            if (imgView.getDrawable() == null){
+                                try{
+                                    Bitmap bmp;
+                                    MediaMetadataRetriever mMMR = new MediaMetadataRetriever();
+                                    mMMR.setDataSource(getApplicationContext(), lastPic);
+                                    bmp = mMMR.getFrameAtTime();
+                                    imgView.setImageBitmap(bmp);
+                                    if (bmp == null){
                                         imgView.setBackgroundResource(R.drawable.file);
                                     }
+                                }catch (Exception e){
+                                    e.printStackTrace();
+                                    imgView.setBackgroundResource(R.drawable.file);
+                                }
+                            }
+
+                            timer = new CountDownTimer(300*1000, 1000) {
+                                @SuppressLint("DefaultLocale")
+                                @Override
+                                public void onTick(long millisUntilFinished) {
+                                    int secondsUntilFinished = (int) millisUntilFinished/1000;
+                                    int minutes = secondsUntilFinished/60;
+                                    int seconds = secondsUntilFinished%60;
+                                    timeRemTV.setText(String.format("Time remaining: %02d:%02d", minutes, seconds));
                                 }
 
-                                timer = new CountDownTimer(300*1000, 1000) {
-                                    @Override
-                                    public void onTick(long millisUntilFinished) {
-                                        int secondsUntilFinished = (int) millisUntilFinished/1000;
-                                        int minutes = secondsUntilFinished/60;
-                                        int seconds = secondsUntilFinished%60;
-                                        timeRemTV.setText(String.format("Time remaining: %02d:%02d", minutes, seconds));
-                                    }
+                                @Override
+                                public void onFinish() {
+                                    cleanHome();
+                                }
+                            };
+                            timer.start();
+                        }
 
-                                    @Override
-                                    public void onFinish() {
-                                        cleanHome();
-                                    }
-                                };
-                                timer.start();
-                            }
-
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                imgView.setBackgroundResource(R.drawable.file);
-                            }
-                    }
-                }, new Response.ErrorListener() {
-
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
-                        Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
-                                .show();
-                        Log.i(TAG, "error: " + error);
-                        cleanHome();
-                    }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            imgView.setBackgroundResource(R.drawable.file);
+                        }
+                }, error -> {
+                    String errorMessage = isConnectedToInternet() ? "Something went wrong" : "Something went wrong, check your internet connection";
+                    Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
+                            .show();
+                    Log.i(TAG, "error: " + error);
+                    cleanHome();
                 });
         queue.add(jsonObjectRequest);
     }
