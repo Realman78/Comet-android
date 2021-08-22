@@ -4,6 +4,8 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.3175925925925926" />
+        <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/drawable/cursor.xml" value="0.453125" />
+        <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/drawable/edit_text.xml" value="0.41354166666666664" />
         <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/drawable/round_button.xml" value="0.31197916666666664" />
         <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/layout-hdpi/high.xml" value="0.5364583333333334" />
         <entry key="..\:/Users/Marin/AndroidStudioProjects/Comet/app/src/main/res/layout-ldpi/low.xml" value="0.4" />

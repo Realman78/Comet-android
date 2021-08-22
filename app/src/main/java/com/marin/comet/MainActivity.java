@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView timeRemTV;
     private EditText codeET;
     private DownloadManager manager;
-
+    private PopupWindow popupWindow;
     private int counter = 0;
     private boolean uploading = false;
     private CountDownTimer timer;
@@ -75,8 +75,9 @@ public class MainActivity extends AppCompatActivity {
     static final int MAX = 999999;
     static final int REQUEST_CODE = 1;
     static final int MAX_SIZE = 50000000;
-    static final String URL = "http://192.168.1.5:3000/";
-    String code = "";
+    static final String URL = "https://upcomet.herokuapp.com/";
+    private String code = "";
+    static final String GET_FILES_TEXT = "Get your files at:";
     private Uri lastPic;
     private ArrayList<Uri> mArrayUri;
     private Uri largestUri = null;
@@ -95,13 +96,15 @@ public class MainActivity extends AppCompatActivity {
         imgView = findViewById(R.id.targetImage);
         codeTV = findViewById(R.id.codeTV);
         getFilesTV = findViewById(R.id.getFilesTV);
+        getFilesTV.setText("");
         leftTV = findViewById(R.id.leftTv);
         timeRemTV = findViewById(R.id.timeRemainingTV);
         registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
         Button getFilesButton = findViewById(R.id.getFilesButton);
-
+        getFilesButton.setEnabled(false);
         mArrayUri = new ArrayList<>();
         codeTV.setText("");
+        timeRemTV.setText("");
 
         //Status bar color change
         Window window = MainActivity.this.getWindow();
@@ -116,21 +119,30 @@ public class MainActivity extends AppCompatActivity {
         config.put("cloud_name", "");
         config.put("secure", "true");
         config.put("api_key", "");
-        config.put("api_secret", "");
+        config.put("api_secret", "-8HlbEzx5vE");
         new Cloudinary(config);
+        try{
+            MediaManager.init(this, config);
+        }catch(Exception e) {
+            e.printStackTrace();
+        }
 
-        MediaManager.init(this, config);
 
         //Popup section
         getFilesButton.setOnClickListener(v ->{
+            if (uploading){
+                Toast.makeText(getApplicationContext(), "Please wait until the file uploads", Toast.LENGTH_SHORT).show();
+                return;
+            }
             LayoutInflater inflater = (LayoutInflater) getSystemService(LAYOUT_INFLATER_SERVICE);
             @SuppressLint("InflateParams") View popupView = inflater.inflate(R.layout.popup_window, null);
 
             int width = LinearLayout.LayoutParams.WRAP_CONTENT;
             int height = LinearLayout.LayoutParams.WRAP_CONTENT;
-            final PopupWindow popupWindow = new PopupWindow(popupView, width, height, true);
+            popupWindow = new PopupWindow(popupView, width, height, true);
 
             popupWindow.showAtLocation(imgView, Gravity.CENTER, 0, 0);
+
             codeET = popupView.findViewById(R.id.codeET);
 
             codeET.requestFocus();
@@ -141,6 +153,19 @@ public class MainActivity extends AppCompatActivity {
                     popupWindow.dismiss();
                     requestCrater(codeET.getText().toString());
                 }
+                return false;
+            });
+            codeET.setOnLongClickListener(view -> {
+                ClipboardManager clipBoard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                ClipData clipData = clipBoard.getPrimaryClip();
+                ClipData.Item item = clipData.getItemAt(0);
+                String text = item.getText().toString();
+                if (text.length() == 6 && text.matches("[0-9]+")){
+                    codeET.setText(text);
+                    popupWindow.dismiss();
+                    requestCrater(text);
+                }
+
                 return false;
             });
             popupWindow.setOnDismissListener(() -> {
@@ -179,6 +204,27 @@ public class MainActivity extends AppCompatActivity {
            openChooser();
         */
         button.setEnabled(true);
+        getFilesButton.setEnabled(true);
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        try{
+            if (popupWindow != null && popupWindow.isShowing()){
+                popupWindow.dismiss();
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        super.onBackPressed();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        closeKeyboard();
     }
 
     private void requestCrater(String inputted){
@@ -211,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), errorMessage, Toast.LENGTH_LONG)
                     .show();
             Log.i(TAG, "error: " + error);
-            cleanHome();
+
         });
 
 
@@ -233,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
         codeTV.setVisibility(visibilty);
         imgView.setVisibility(visibilty);
         leftTV.setVisibility(visibilty);
-        getFilesTV.setVisibility(visibilty);
+        timeRemTV.setVisibility(visibilty);
     }
 
     @Override
@@ -420,6 +466,7 @@ public class MainActivity extends AppCompatActivity {
                             code = response.getString("code");
                             codeTV.setText("upcomet.herokuapp.com\nCode: "+ code);
                             getFilesTV.setVisibility(View.VISIBLE);
+                            getFilesTV.setText(GET_FILES_TEXT);
                             imgView.setImageURI(showImageUri);
                             Toast.makeText(getApplicationContext(), "Press the link to copy", Toast.LENGTH_SHORT).show();
 
@@ -537,11 +584,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void cleanHome(){
         getFilesTV.setVisibility(View.INVISIBLE);
+        getFilesTV.setText("");
         leftTV.setVisibility(View.INVISIBLE);
+        leftTV.setText("");
         imgView.setImageURI(null);
         imgView.setBackgroundResource(0);
         imgView.setVisibility(View.INVISIBLE);
         timeRemTV.setVisibility(View.INVISIBLE);
+        timeRemTV.setText("");
         codeTV.setText("");
         uploading = false;
         maxSize = 0;
